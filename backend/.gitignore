@@ -50,5 +50,6 @@ nvdev_api.txt
 mock_instances/
 logs/
 uvicorn_main.txt
-
+openai_api.txt
+gemini_api.txt
 .DS_Store
