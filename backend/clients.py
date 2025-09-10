@@ -126,10 +126,8 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
         "api_type": "openai",
         "completion_config": {
             "model": "o1",
-            "temperature": 0.2,
-            "top_p": 0.7,
-            "max_tokens": 8192,
-            "stream": True,
+            "max_completion_tokens": 8192,
+            "stream": False,
         },
     },
     "o1-preview": {
@@ -137,10 +135,8 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
         "api_type": "openai",
         "completion_config": {
             "model": "o1-preview",
-            "temperature": 0.2,
-            "top_p": 0.7,
-            "max_tokens": 8192,
-            "stream": True,
+            "max_completion_tokens": 8192,
+            "stream": False,
         },
     },
     "gemini-2.5-pro": {

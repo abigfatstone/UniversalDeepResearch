@@ -108,11 +108,14 @@ async def get_available_models():
         if provider not in models_by_provider:
             models_by_provider[provider] = []
         
+        # 获取max_tokens，优先使用max_completion_tokens（用于o1系列模型）
+        max_tokens = model_config["completion_config"].get("max_completion_tokens") or model_config["completion_config"].get("max_tokens", 4096)
+        
         models_by_provider[provider].append({
             "id": model_name,
             "name": model_name,
             "provider": provider,
-            "max_tokens": model_config["completion_config"]["max_tokens"]
+            "max_tokens": max_tokens
         })
     
     return {
