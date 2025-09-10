@@ -21,6 +21,7 @@ import PromptBar from '@/components/PromptBar';
 import ResearchProgressList, { ResearchEventType } from '@/components/ResearchProgressList';
 import ReportViewer from '@/components/ReportViewer';
 import ResearchStrategyEditor from '@/components/ResearchStrategyEditor';
+import ModelSelector from '@/components/ModelSelector';
 import { ApplicationState } from '@/types/ApplicationState';
 import { v4 as uuidv4 } from 'uuid';
 import config, { getApiEndpoint } from '@/config';
@@ -45,6 +46,7 @@ interface ApiRequestBody {
   strategy_content?: string;
   dry: boolean;
   start_from: 'research' | 'reporting';
+  model?: string;
 }
 
 export default function Home() {
@@ -62,6 +64,7 @@ export default function Home() {
   const [reportContent, setReportContent] = useState<string>('');
   const [editedStrategyId, setEditedStrategyId] = useState('');
   const [strategyContents, setStrategyContents] = useState<Record<string, string>>(initialStrategyContents);
+  const [selectedModel, setSelectedModel] = useState<string>('');
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -209,7 +212,8 @@ export default function Home() {
         strategy_id: strategyId,
         strategy_content: strategyContents[strategyId] || '',
         dry: config.runtime.dryRun,
-        start_from: 'research'
+        start_from: 'research',
+        model: selectedModel || undefined
       },
       (prev) => ({
         type: 'researching',
@@ -430,6 +434,11 @@ export default function Home() {
       <main className="row-start-2 flex flex-col items-center justify-center gap-8 w-full">
         <div className="w-[min(90%,max(200pt,40%))] min-w-[30rem] flex flex-col items-center justify-center gap-8">
           <h1 className="text-4xl font-bold">NVR Universal Deep Research</h1>
+          <ModelSelector
+            selectedModel={selectedModel}
+            onModelChange={setSelectedModel}
+            disabled={state.type === 'researching' || state.type === 'finalizing'}
+          />
           <PromptBar
             onResearch={handleStartResearch}
             onEditStrategy={handleStartEditingStrategy}

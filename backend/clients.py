@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Literal, TypedDict
 
 from openai import OpenAI
 from tavily import TavilyClient
+import google.generativeai as genai
 
 from config import get_config
 
@@ -32,7 +33,7 @@ from config import get_config
 config = get_config()
 
 # Configuration system
-ApiType = Literal["nvdev", "openai", "tavily"]
+ApiType = Literal["nvdev", "openai", "tavily", "gemini"]
 
 
 class ModelConfig(TypedDict):
@@ -76,6 +77,105 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
             "stream": True,
         },
     },
+    "gpt-5": {
+        "base_url": "https://api.openai.com/v1",
+        "api_type": "openai",
+        "completion_config": {
+            "model": "gpt-5",
+            "temperature": 0.2,
+            "top_p": 0.7,
+            "max_tokens": 8192,
+            "stream": True,
+        },
+    },
+    "gpt-4o": {
+        "base_url": "https://api.openai.com/v1",
+        "api_type": "openai",
+        "completion_config": {
+            "model": "gpt-4o",
+            "temperature": 0.2,
+            "top_p": 0.7,
+            "max_tokens": 4096,
+            "stream": True,
+        },
+    },
+    "gpt-4o-mini": {
+        "base_url": "https://api.openai.com/v1",
+        "api_type": "openai",
+        "completion_config": {
+            "model": "gpt-4o-mini",
+            "temperature": 0.2,
+            "top_p": 0.7,
+            "max_tokens": 4096,
+            "stream": True,
+        },
+    },
+    "gpt-4-turbo": {
+        "base_url": "https://api.openai.com/v1",
+        "api_type": "openai",
+        "completion_config": {
+            "model": "gpt-4-turbo",
+            "temperature": 0.2,
+            "top_p": 0.7,
+            "max_tokens": 4096,
+            "stream": True,
+        },
+    },
+    "o1": {
+        "base_url": "https://api.openai.com/v1",
+        "api_type": "openai",
+        "completion_config": {
+            "model": "o1",
+            "temperature": 0.2,
+            "top_p": 0.7,
+            "max_tokens": 8192,
+            "stream": True,
+        },
+    },
+    "o1-preview": {
+        "base_url": "https://api.openai.com/v1",
+        "api_type": "openai",
+        "completion_config": {
+            "model": "o1-preview",
+            "temperature": 0.2,
+            "top_p": 0.7,
+            "max_tokens": 8192,
+            "stream": True,
+        },
+    },
+    "gemini-2.5-pro": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta",
+        "api_type": "gemini",
+        "completion_config": {
+            "model": "gemini-2.5-pro",
+            "temperature": 0.2,
+            "top_p": 0.7,
+            "max_tokens": 8192,
+            "stream": True,
+        },
+    },
+    "gemini-1.5-pro": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta",
+        "api_type": "gemini",
+        "completion_config": {
+            "model": "gemini-1.5-pro",
+            "temperature": 0.2,
+            "top_p": 0.7,
+            "max_tokens": 4096,
+            "stream": True,
+        },
+    },
+    "gemini-1.5-flash": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta",
+        "api_type": "gemini",
+        "completion_config": {
+            "model": "gemini-1.5-flash",
+            "temperature": 0.2,
+            "top_p": 0.7,
+            "max_tokens": 4096,
+            "stream": True,
+        },
+    },
 }
 
 # Default model to use (from configuration)
@@ -107,6 +207,7 @@ def get_api_key(api_type: ApiType) -> str:
         "nvdev": config.model.api_key_file,
         "openai": "openai_api.txt",
         "tavily": config.search.tavily_api_key_file,
+        "gemini": "gemini_api.txt",
     }
 
     key_file = api_key_files.get(api_type)
@@ -170,8 +271,30 @@ def create_tavily_client() -> TavilyClient:
     return TavilyClient(api_key=api_key)
 
 
+def create_gemini_client():
+    """
+    Create a Gemini client instance for Google's generative AI.
+
+    This function configures the Google Generative AI client using
+    the API key from the configured file path.
+
+    Returns:
+        Configured Gemini client
+
+    Raises:
+        FileNotFoundError: If the Gemini API key file is not found
+
+    Example:
+        >>> client = create_gemini_client()
+        >>> model = genai.GenerativeModel('gemini-1.5-pro')
+    """
+    api_key = get_api_key("gemini")
+    genai.configure(api_key=api_key)
+    return genai
+
+
 def get_completion(
-    client: OpenAI,
+    client: OpenAI | Any,
     messages: List[Dict[str, Any]],
     model_config: ModelConfig | None = None,
 ) -> str:
@@ -200,6 +323,39 @@ def get_completion(
     """
     model_config = model_config or MODEL_CONFIGS[DEFAULT_MODEL]
 
+    # Handle Gemini models
+    if model_config["api_type"] == "gemini":
+        # Convert OpenAI format messages to Gemini format
+        gemini_messages = []
+        for msg in messages:
+            if msg["role"] == "system":
+                # Gemini doesn't have system role, prepend to first user message
+                continue
+            elif msg["role"] == "user":
+                gemini_messages.append({"role": "user", "parts": [msg["content"]]})
+            elif msg["role"] == "assistant":
+                gemini_messages.append({"role": "model", "parts": [msg["content"]]})
+        
+        # Add system message to first user message if exists
+        system_msg = next((msg for msg in messages if msg["role"] == "system"), None)
+        if system_msg and gemini_messages:
+            gemini_messages[0]["parts"][0] = f"{system_msg['content']}\n\n{gemini_messages[0]['parts'][0]}"
+        
+        # Create Gemini model
+        model = genai.GenerativeModel(model_config["completion_config"]["model"])
+        
+        # Generate content
+        if len(gemini_messages) == 1:
+            # Single message
+            response = model.generate_content(gemini_messages[0]["parts"][0])
+        else:
+            # Chat conversation
+            chat = model.start_chat(history=gemini_messages[:-1])
+            response = chat.send_message(gemini_messages[-1]["parts"][0])
+        
+        return response.text
+
+    # Handle OpenAI models
     # Handle special model configurations
     if "retarded" in model_config and model_config["retarded"]:
         if messages[0]["role"] == "system":

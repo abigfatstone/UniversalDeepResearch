@@ -63,8 +63,8 @@ LOGGING_CONFIG["formatters"]["default"][
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[config.cors.frontend_url],  # Frontend URL from config
-    allow_credentials=config.cors.allow_credentials,
+    allow_origins=["*"] if config.cors.frontend_url == "*" else [config.cors.frontend_url],  # Allow all origins or specific frontend URL
+    allow_credentials=False if config.cors.frontend_url == "*" else config.cors.allow_credentials,  # Cannot use credentials with wildcard origins
     allow_methods=config.cors.allow_methods,
     allow_headers=config.cors.allow_headers,
 )
@@ -82,12 +82,42 @@ class ResearchRequest(BaseModel):
     strategy_content: Optional[str] = None
     prompt: Optional[str] = None
     mock_directory: str = "mock_instances/stocks_24th_3_sections"
+    model: Optional[str] = None  # 新增模型选择字段
 
 
 @app.get("/")
 async def root():
     return {
-        "message": "The Deep Research Backend is running. Use the /api/research endpoint to start a new research session."
+        "message": "🚀 The Deep Research Backend is running with HOT RELOAD! Use the /api/research endpoint to start a new research session."
+    }
+
+
+@app.get("/api/models")
+async def get_available_models():
+    """
+    Get list of available AI models.
+    
+    Returns:
+        Dict containing available models grouped by provider
+    """
+    from clients import MODEL_CONFIGS
+    
+    models_by_provider = {}
+    for model_name, model_config in MODEL_CONFIGS.items():
+        provider = model_config["api_type"]
+        if provider not in models_by_provider:
+            models_by_provider[provider] = []
+        
+        models_by_provider[provider].append({
+            "id": model_name,
+            "name": model_name,
+            "provider": provider,
+            "max_tokens": model_config["completion_config"]["max_tokens"]
+        })
+    
+    return {
+        "models": models_by_provider,
+        "default_model": config.model.default_model
     }
 
 
@@ -170,7 +200,7 @@ async def start_research(request: ResearchRequest):
 
     # Choose implementation
     research_impl = (
-        (lambda session_key, prompt: dry_research(session_key, prompt, mock_dir))
+        (lambda session_key, prompt, model: dry_research(session_key, prompt, mock_dir))
         if request.dry
         else real_research
     )
@@ -185,7 +215,7 @@ async def start_research(request: ResearchRequest):
 
     # Prepare generators
     research_gen = (
-        research_impl(session_key, request.prompt)
+        research_impl(session_key, request.prompt, request.model)
         if request.start_from == "research"
         else None
     )

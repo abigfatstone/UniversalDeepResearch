@@ -8,3 +8,4 @@ evaluate
 openai==1.65.1
 transformers
 tavily-python
+google-generativeai

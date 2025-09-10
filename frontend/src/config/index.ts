@@ -54,6 +54,14 @@ const defaultConfig: AppConfig = {
 
 // Helper function to get the full backend URL
 export const getBackendUrl = (config: AppConfig = defaultConfig): string => {
+  // 在浏览器环境中，动态检测当前主机名
+  if (typeof window !== 'undefined') {
+    const currentHost = window.location.hostname;
+    // 如果配置的baseUrl是localhost，则使用当前访问的主机名
+    if (config.backend.baseUrl.includes('localhost')) {
+      return `http://${currentHost}:${config.backend.port}`;
+    }
+  }
   return `${config.backend.baseUrl}:${config.backend.port}`;
 };
 

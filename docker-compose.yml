@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # 后端服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: udr-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=info
+      - FRONTEND_URL=*
+      - ALLOW_CREDENTIALS=true
+      - DEFAULT_MODEL=gpt-5
+      - LLM_BASE_URL=https://api.openai.com/v1
+      - LLM_API_KEY_FILE=openai_api.txt
+      - LLM_TEMPERATURE=0.2
+      - LLM_TOP_P=0.7
+      - LLM_MAX_TOKENS=2048
+      - TAVILY_API_KEY_FILE=tavily_api.txt
+      - MAX_SEARCH_RESULTS=10
+      - MAX_TOPICS=1
+      - MAX_SEARCH_PHRASES=1
+      - MOCK_DIRECTORY=mock_instances/stocks_24th_3_sections
+      - RANDOM_SEED=42
+      - LOG_DIR=logs
+      - TRACE_ENABLED=true
+      - COPY_INTO_STDOUT=false
+      - LONG_CONTEXT_CUTOFF=8192
+      - FORCE_LONG_CONTEXT=false
+      - MAX_ITERATIONS=1024
+      - INTERACTION_LEVEL=none
+    volumes:
+      - ./backend:/app:rw  # 挂载整个后端代码目录，支持热重载
+      - ./backend/logs:/app/logs
+      - ./backend/instances:/app/instances
+      - ./backend/mock_instances:/app/mock_instances
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: udr-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development  # 改为开发模式支持热重载
+      - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app:rw  # 挂载整个前端代码目录，支持热重载
+      - /app/node_modules  # 排除node_modules避免覆盖
+      - /app/.next  # 排除.next构建目录
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    command: npm run dev  # 使用开发模式启动
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  default:
+    name: udr-network

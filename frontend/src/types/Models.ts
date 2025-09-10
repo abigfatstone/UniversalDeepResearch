@@ -14,11 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  /* config options here */
-  output: 'standalone',
-};
+export interface ModelInfo {
+  id: string;
+  name: string;
+  provider: string;
+  max_tokens: number;
+}
 
-export default nextConfig;
+export interface ModelsResponse {
+  models: {
+    [provider: string]: ModelInfo[];
+  };
+  default_model: string;
+}
+
+export type ModelProvider = 'openai' | 'gemini' | 'nvdev';

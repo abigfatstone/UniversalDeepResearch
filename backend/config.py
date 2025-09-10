@@ -46,7 +46,7 @@ class CORSConfig:
     """CORS configuration settings."""
 
     frontend_url: str = field(
-        default_factory=lambda: os.getenv("FRONTEND_URL", "http://localhost:3000")
+        default_factory=lambda: os.getenv("FRONTEND_URL", "*")
     )
     allow_credentials: bool = field(
         default_factory=lambda: os.getenv("ALLOW_CREDENTIALS", "true").lower() == "true"

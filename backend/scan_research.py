@@ -24,7 +24,7 @@ This module provides the main research functionality including:
 
 import asyncio
 import random
-from typing import Any, AsyncGenerator, Dict, List
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from openai import OpenAI
 from tavily import TavilyClient
@@ -74,7 +74,7 @@ def make_event(
 
 
 async def do_research(
-    session_key: str, prompt: str
+    session_key: str, prompt: str, model: Optional[str] = None
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """
     Performs research based on the provided query and yields events as they occur.
@@ -113,12 +113,23 @@ async def do_research(
     research_artifacts_path: str = build_research_artifacts_path(session_key)
     items.register_item(research_artifacts_path, {"type": "prompt", "prompt": prompt})
 
-    client = create_lm_client()
+    # 创建客户端，支持模型选择
+    from clients import MODEL_CONFIGS
+    model_config = None
+    if model and model in MODEL_CONFIGS:
+        model_config = MODEL_CONFIGS[model]
+    
+    if model_config and model_config["api_type"] == "gemini":
+        from clients import create_gemini_client
+        client = create_gemini_client()
+    else:
+        client = create_lm_client(model_config)
+    
     tavily_client = create_tavily_client()
 
     yield make_event(
         "prompt_received",
-        f"Received research request: '{prompt}'",
+        f"Received research request: '{prompt}' using model: {model or 'default'}",
     )
 
     prompt_valid: bool = check_if_prompt_is_valid(client, prompt)
@@ -503,7 +514,7 @@ def produce_report(
 ) -> str:
     topic_relevant_segments_str: str = "\n".join(
         [
-            f"Topic: {topic}\n{'\n'.join(segments)}"
+            f"Topic: {topic}\n" + "\n".join(segments)
             for topic, segments in topic_relevant_segments.items()
         ]
     )

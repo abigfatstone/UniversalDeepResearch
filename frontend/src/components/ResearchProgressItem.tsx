@@ -46,7 +46,7 @@ const iconMap = {
 };
 
 export default function ResearchProgressItem({ event }: ResearchProgressItemProps) {
-  const Icon = event.type in iconMap ? iconMap[event.type] : ChatBubbleLeftEllipsisIcon;
+  const Icon = event.type in iconMap ? iconMap[event.type as keyof typeof iconMap] : ChatBubbleLeftEllipsisIcon;
   const iconColor = event.type === 'error' ? 'text-red-500' : 'text-gray-500';
 
   return (
