@@ -5,6 +5,3 @@ backend/openai_api.txt
 backend/gemini_api.txt
 backend/nvdev_api.txt
 backend/tavily_api.txt
-
-# 但保留示例文件
-!backend/*_api.txt.example
