@@ -172,7 +172,6 @@ class OpenAIClient(Client):
             "model": self.model,
             "top_p": 1,
             "temperature": 0.0,
-            "max_tokens": 2048,
             "stream": True,
             "seed": self.seed,
         }
